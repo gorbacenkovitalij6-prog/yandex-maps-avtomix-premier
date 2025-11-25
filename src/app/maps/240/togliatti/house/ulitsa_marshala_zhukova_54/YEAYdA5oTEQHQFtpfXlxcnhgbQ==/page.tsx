@@ -74,9 +74,11 @@ export default function Page() {
 
   // Загрузка состояния избранного из localStorage
   useEffect(() => {
-    const favoriteStatus = localStorage.getItem('avtomix-favorite');
-    if (favoriteStatus === 'true') {
-      setIsFavorite(true);
+    if (typeof window !== 'undefined') {
+      const favoriteStatus = localStorage.getItem('avtomix-favorite');
+      if (favoriteStatus === 'true') {
+        setIsFavorite(true);
+      }
     }
   }, []);
 
@@ -84,7 +86,10 @@ export default function Page() {
   const toggleFavorite = () => {
     const newFavoriteStatus = !isFavorite;
     setIsFavorite(newFavoriteStatus);
-    localStorage.setItem('avtomix-favorite', String(newFavoriteStatus));
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('avtomix-favorite', String(newFavoriteStatus));
+    }
 
     setFavoriteAction(newFavoriteStatus ? 'added' : 'removed');
     setShowFavoriteNotification(true);
@@ -171,6 +176,8 @@ export default function Page() {
 
   // Функция копирования URL для поделиться
   const copyUrlToClipboard = async () => {
+    if (typeof window === 'undefined') return;
+    
     try {
       const url = window.location.href;
       await navigator.clipboard.writeText(url);
@@ -359,6 +366,7 @@ export default function Page() {
   };
 
   const getBottomSheetHeight = () => {
+    if (typeof window === 'undefined') return '210px'; // Default height for SSR
     const vh = window.innerHeight;
 
     if (bottomSheetState === 'collapsed') {
