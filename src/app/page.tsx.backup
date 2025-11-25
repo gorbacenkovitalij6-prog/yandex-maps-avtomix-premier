@@ -1,0 +1,1295 @@
+'use client';
+
+import { useState } from 'react';
+import { reviewsData } from '@/data/reviews';
+
+export default function Page() {
+  const [activeTab, setActiveTab] = useState('reviews');
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewLikes, setReviewLikes] = useState<{ [key: number]: { liked: boolean; disliked: boolean; likes: number; dislikes: number } }>({});
+  const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set());
+  const [sortMode, setSortMode] = useState('default');
+  const [showBusinessResponse, setShowBusinessResponse] = useState<Set<number>>(new Set());
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [showMap, setShowMap] = useState(false);
+
+  const handleLike = (reviewId: number) => {
+    setReviewLikes(prev => {
+      const current = prev[reviewId] || { liked: false, disliked: false, likes: 0, dislikes: 0 };
+
+      if (current.liked) {
+        // Убираем лайк
+        return {
+          ...prev,
+          [reviewId]: { ...current, liked: false, likes: current.likes - 1 }
+        };
+      } else {
+        // Ставим лайк (и убираем дизлайк если был)
+        return {
+          ...prev,
+          [reviewId]: {
+            liked: true,
+            disliked: false,
+            likes: current.likes + 1,
+            dislikes: current.disliked ? current.dislikes - 1 : current.dislikes
+          }
+        };
+      }
+    });
+  };
+
+  const handleDislike = (reviewId: number) => {
+    setReviewLikes(prev => {
+      const current = prev[reviewId] || { liked: false, disliked: false, likes: 0, dislikes: 0 };
+
+      if (current.disliked) {
+        // Убираем дизлайк
+        return {
+          ...prev,
+          [reviewId]: { ...current, disliked: false, dislikes: current.dislikes - 1 }
+        };
+      } else {
+        // Ставим дизлайк (и убираем лайк если был)
+        return {
+          ...prev,
+          [reviewId]: {
+            liked: false,
+            disliked: true,
+            likes: current.liked ? current.likes - 1 : current.likes,
+            dislikes: current.dislikes + 1
+          }
+        };
+      }
+    });
+  };
+
+  const toggleReviewExpanded = (reviewId: number) => {
+    setExpandedReviews(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleBusinessResponse = (reviewId: number) => {
+    setShowBusinessResponse(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
+  };
+
+  const getFilteredAndSortedReviews = () => {
+    const filtered = [...reviews];
+
+    // Сортировка
+    if (sortMode === 'rating-high') {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (sortMode === 'rating-low') {
+      filtered.sort((a, b) => a.rating - b.rating);
+    }
+
+    return filtered;
+  };
+
+  const reviews = reviewsData;
+
+  return (
+    <div className="flex flex-col lg:flex-row h-screen bg-white">
+      {/* Left Panel */}
+      <div
+        className={`flex flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out overflow-hidden ${
+          isPanelCollapsed ? 'hidden lg:block lg:w-0' : 'w-full lg:w-[714px]'
+        }`}
+      >
+        {/* Header */}
+        <header className="flex items-center justify-between px-8 lg:px-12 py-3 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="lg:w-6 lg:h-6">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#FF0000"/>
+            </svg>
+            <span className="text-[15px] lg:text-[17px] font-medium">Yandex Maps</span>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <button className="hidden md:flex items-center gap-2 text-[14px] lg:text-[15px] text-gray-700 hover:text-black">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="lg:w-5 lg:h-5">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+              </svg>
+              <span className="hidden lg:inline">Поиск</span>
+            </button>
+            <button className="hidden md:flex items-center gap-2 text-[14px] lg:text-[15px] text-gray-700 hover:text-black">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="lg:w-5 lg:h-5">
+                <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z" fill="currentColor"/>
+              </svg>
+              <span className="hidden lg:inline">Маршрут</span>
+            </button>
+            <button className="p-2 hover:bg-gray-100 rounded">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="lg:w-5 lg:h-5">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto transition-all duration-300">
+          {/* Title */}
+          <div className="pt-4 lg:pt-6 pb-3 lg:pb-4">
+            <h1 className="text-[24px] lg:text-[32px] font-medium text-black px-8 lg:px-12">Fury Auto</h1>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-4 lg:gap-6 px-8 lg:px-12 border-b border-gray-200 overflow-x-auto scrollbar-hide justify-center">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black whitespace-nowrap ${activeTab === 'overview' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Обзор
+            </button>
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black whitespace-nowrap ${activeTab === 'products' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Товары и услуги
+            </button>
+            <button
+              onClick={() => setActiveTab('news')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'news' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Новости <span className="text-gray-400 text-[11px] lg:text-[13px]">1</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('photos')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'photos' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Фото <span className="text-gray-400 text-[11px] lg:text-[13px]">18</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'reviews' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Отзывы <span className="text-gray-400 text-[11px] lg:text-[13px]">40</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('features')}
+              className={`pb-3 text-[13px] lg:text-[15px] hover:text-black whitespace-nowrap ${activeTab === 'features' ? 'text-black border-b-2 border-blue-500' : 'text-gray-700'}`}
+            >
+              Особенности
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="px-8 lg:px-12 py-6">
+              {/* Company Logo */}
+              <div className="mb-6 bg-white rounded-lg p-10 flex items-center justify-center border border-gray-200">
+                <div className="text-center">
+                  <div className="text-[72px] font-black leading-none mb-3" style={{ fontFamily: 'Arial Black, sans-serif', letterSpacing: '-0.05em' }}>
+                    <span className="inline-block">A</span>
+                    <span className="inline-block ml-1">P</span>
+                  </div>
+                  <div className="text-[20px] font-bold tracking-[0.2em] mb-1" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    AVTOMIX
+                  </div>
+                  <div className="text-[13px] tracking-[0.15em] text-gray-600" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    PREMIER
+                  </div>
+                </div>
+              </div>
+
+              {/* About Company */}
+              <div className="mb-6">
+                <h2 className="text-[18px] font-medium text-gray-800 mb-3">О компании</h2>
+                <p className="text-[15px] text-gray-700 leading-relaxed">
+                  Fury Auto - надежная компания по продаже качественных подержанных автомобилей в Уссурийске, Приморский край.
+                  Мы специализируемся на подборе и продаже автомобилей из Японии с учетом всех пожеланий и бюджета клиента.
+                  Наша команда профессионалов поможет вам выбрать идеальный автомобиль и быстро оформить все необходимые документы.
+                </p>
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#FF0000"/>
+                  </svg>
+                  <div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-0.5">Адрес</div>
+                    <div className="text-[14px] text-gray-600">Уссурийск, Приморский край, Россия</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0">
+                    <path d="M20 10.999h2C22 5.869 18.127 2 12.99 2v2C17.052 4 20 6.943 20 10.999z" fill="#4a5568"/>
+                    <path d="M13 8c2.103 0 3 .897 3 3h2c0-3.225-1.775-5-5-5v2zm3.422 5.443a1.001 1.001 0 00-1.391.043l-2.393 2.461c-.576-.11-1.734-.471-2.926-1.66-1.192-1.193-1.553-2.354-1.66-2.926l2.459-2.394a1 1 0 00.043-1.391L6.859 3.513a1 1 0 00-1.391-.087l-2.17 1.861a1 1 0 00-.29.649c-.015.25-.301 6.172 4.291 10.766C11.305 20.707 16.323 21 17.705 21c.202 0 .326-.006.359-.008a.992.992 0 00.648-.291l1.86-2.171a1 1 0 00-.086-1.391l-4.064-3.696z" fill="#4a5568"/>
+                  </svg>
+                  <div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-0.5">Телефон</div>
+                    <button className="text-[14px] text-blue-600 hover:text-blue-700">Показать номер телефона</button>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0">
+                    <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" fill="#4a5568"/>
+                    <path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586z" fill="#4a5568"/>
+                  </svg>
+                  <div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-0.5">Часы работы</div>
+                    <div className="text-[14px] text-gray-600">Ежедневно: 9:00 - 19:00</div>
+                    <div className="text-[13px] text-green-600 mt-1">Сейчас открыто</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0">
+                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" fill="#4a5568"/>
+                  </svg>
+                  <div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-0.5">Категория</div>
+                    <div className="text-[14px] text-gray-600">Автосалон • Продажа автомобилей с пробегом</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex gap-3">
+                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-[14px] font-medium transition">
+                  Позвонить
+                </button>
+                <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2.5 rounded-lg text-[14px] font-medium transition">
+                  Маршрут
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'products' && (
+            <div className="px-8 lg:px-12 py-6">
+              <h2 className="text-[20px] font-medium text-black mb-4">Товары и услуги</h2>
+
+              <div className="space-y-3">
+                <div className="p-5 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Продажа подержанных автомобилей</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Большой выбор качественных автомобилей с пробегом из Японии. Все машины проходят тщательную проверку перед продажей.
+                      </p>
+                      <div className="flex items-center gap-2 text-[13px] text-blue-700">
+                        <span className="bg-blue-200 px-3 py-1 rounded-full">Toyota</span>
+                        <span className="bg-blue-200 px-3 py-1 rounded-full">Honda</span>
+                        <span className="bg-blue-200 px-3 py-1 rounded-full">Nissan</span>
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">🚗</div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Подбор автомобиля под заказ</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Поможем найти и привезти нужный автомобиль по вашим требованиям: марка, модель, год, комплектация, бюджет.
+                      </p>
+                      <div className="text-[13px] text-green-700 font-medium">
+                        ⏱ Срок подбора: 1-3 недели
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">🔍</div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border border-purple-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Помощь в оформлении документов</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Полное сопровождение при оформлении документов, регистрации в ГИБДД, получении электронного ПТС.
+                      </p>
+                      <div className="text-[13px] text-purple-700 font-medium">
+                        📋 Быстрое оформление за 1-2 дня
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">📄</div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Трейд-ин (обмен)</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Обменяйте свой старый автомобиль на новый с доплатой. Честная оценка и выгодные условия обмена.
+                      </p>
+                      <div className="text-[13px] text-orange-700 font-medium">
+                        💰 Оценка автомобиля за 30 минут
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">🔄</div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Консультация и тест-драйв</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Профессиональная консультация по выбору автомобиля. Тест-драйв любой машины из нашего автопарка.
+                      </p>
+                      <div className="text-[13px] text-red-700 font-medium">
+                        🎯 Индивидуальный подход к каждому клиенту
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">🤝</div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl border border-teal-200 hover:shadow-md transition cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Помощь в получении кредита</h3>
+                      <p className="text-[14px] text-gray-700 mb-3">
+                        Работаем с ведущими банками. Поможем подобрать оптимальные условия кредитования на покупку автомобиля.
+                      </p>
+                      <div className="text-[13px] text-teal-700 font-medium">
+                        💳 Одобрение за 1 день
+                      </div>
+                    </div>
+                    <div className="text-3xl ml-4">💵</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-[14px] text-gray-700 text-center">
+                  Есть вопросы? <button className="text-blue-600 hover:underline font-medium">Свяжитесь с нами</button> для получения подробной консультации
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'news' && (
+            <div className="px-8 lg:px-12 py-6">
+              <div className="mb-6">
+                <h2 className="text-[20px] font-medium text-black mb-2">Новости</h2>
+                <p className="text-[14px] text-gray-600">Актуальные новости от Яндекс.Дзен</p>
+              </div>
+
+              {/* Новостная лента в стиле Дзена */}
+              <div className="space-y-4">
+                {/* Новость 1 */}
+                <a
+                  href="https://dzen.ru/news"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer"
+                >
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">РБК • 2 часа назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        В России представили новую модель электромобиля с увеличенным запасом хода
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Российский производитель электромобилей анонсировал выпуск новой модели с запасом хода до 600 км...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </a>
+
+                {/* Новость 2 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Коммерсантъ • 4 часа назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Продажи автомобилей в России выросли на 15% в этом месяце
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Аналитики отмечают рост интереса к подержанным автомобилям японского производства...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 3 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">ТАСС • 6 часов назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Новые правила регистрации транспортных средств вступят в силу с декабря
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        МВД России утвердило обновленный регламент, упрощающий процедуру регистрации автомобилей...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1486496146582-9ffcd0b2b2b7?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 4 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Авто Mail.ru • 8 часов назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Эксперты назвали самые надежные автомобили 2024 года
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        В рейтинг вошли модели японских, корейских и европейских производителей...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1542362567-b07e54358753?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 5 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Lenta.ru • 10 часов назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        В Приморском крае открылся новый автомобильный дилерский центр
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Современный комплекс предлагает широкий выбор автомобилей и услуги по обслуживанию...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 6 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Ведомости • Вчера</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Спрос на автомобили с правым рулем остается стабильным
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Аналитики рынка отмечают устойчивый интерес покупателей к японским автомобилям...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 7 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Autonews.ru • Вчера</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        ТОП-10 самых популярных автомобилей в России в 2024 году
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Эксперты составили рейтинг моделей, которые чаще всего покупают россияне в этом году...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 8 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Газета.Ru • 2 дня назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Новые технологии безопасности в современных автомобилях
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Производители активно внедряют системы помощи водителю и автономного вождения...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 9 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">РИА Новости • 2 дня назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Средняя цена подержанного автомобиля выросла на 8%
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Рост цен связан с увеличением спроса и дефицитом новых автомобилей на рынке...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 10 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Дром • 3 дня назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Как правильно выбрать автомобиль с пробегом: советы экспертов
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        На что обратить внимание при осмотре подержанного автомобиля перед покупкой...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 11 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Интерфакс • 3 дня назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Росстандарт запретил ввоз автомобилей без системы ЭРА-ГЛОНАСС
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        С января 2025 года вступают в силу новые требования к импортируемым автомобилям...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 12 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Auto.ru • 4 дня назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Toyota остается лидером рынка подержанных авто в России
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Японский автопроизводитель занимает первое место по количеству проданных автомобилей...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 13 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">За рулём • 5 дней назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Обзор новых кроссоверов: что выбрать в 2024 году
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Подробный анализ самых популярных моделей кроссоверов на российском рынке...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 14 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Мотор.ру • 5 дней назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Топливо на АЗС подорожало в среднем на 3 рубля за литр
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Цены на бензин и дизельное топливо выросли из-за сезонного спроса и роста акцизов...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1486496146582-9ffcd0b2b2b7?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Новость 15 */}
+                <a href="https://dzen.ru/news" target="_blank" rel="noopener noreferrer" className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer">
+                  <div className="flex gap-4 p-4">
+                    <div className="flex-1">
+                      <div className="text-[11px] text-gray-500 mb-2">Авто.Вести • Неделю назад</div>
+                      <h3 className="text-[16px] font-medium text-gray-900 mb-2 line-clamp-2">
+                        Страховка ОСАГО: как сэкономить при оформлении полиса
+                      </h3>
+                      <p className="text-[14px] text-gray-600 line-clamp-2">
+                        Эксперты рассказали о способах снижения стоимости обязательного автострахования...
+                      </p>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=200&h=200&fit=crop"
+                        alt="Новость"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+              {/* Кнопка "Показать еще" */}
+              <div className="mt-6 text-center">
+                <a
+                  href="https://dzen.ru/news"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-[14px] font-medium transition"
+                >
+                  Показать ещё новости
+                </a>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'photos' && (
+            <div className="px-8 lg:px-12 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[20px] font-medium text-black">Фотографии</h2>
+                <div className="text-[14px] text-gray-500">18 фото</div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg",
+                  "https://ext.same-assets.com/1653950211/3187060234.jpeg"
+                ].map((photo, index) => (
+                  <div
+                    key={index}
+                    className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition group relative"
+                  >
+                    <img
+                      src={photo}
+                      alt={`Фото ${index + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition"></div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Photo Button */}
+              <div className="mt-6 text-center">
+                <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-[14px] font-medium transition">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  Добавить фото
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'features' && (
+            <div className="px-8 lg:px-12 py-6">
+              <h2 className="text-[20px] font-medium text-black mb-5">Особенности</h2>
+
+              {/* Features List */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#10b981" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Профессиональная команда</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Опытные специалисты с многолетним опытом работы на рынке подержанных автомобилей
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="#3b82f6" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Проверка качества</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Все автомобили проходят тщательную проверку технического состояния перед продажей
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#a855f7" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Быстрое оформление</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Оперативное оформление всех необходимых документов для покупки автомобиля
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke="#f97316" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Индивидуальный подход</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Подбираем автомобиль с учетом всех ваших пожеланий, бюджета и требований
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#ef4444" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Помощь с документами</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Полное сопровождение при оформлении документов и регистрации автомобиля
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#eab308" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Честные цены</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Прозрачное ценообразование без скрытых платежей и дополнительных комиссий
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="#14b8a6" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Автомобили из Японии</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Специализируемся на качественных японских автомобилях известных брендов
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" stroke="#ec4899" strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-medium text-gray-800 mb-1">Высокий рейтинг</div>
+                    <div className="text-[14px] text-gray-600 leading-relaxed">
+                      Средняя оценка 4.8 из 5 на основе отзывов довольных клиентов
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reviews Tab Content */}
+          {activeTab === 'reviews' && (
+            <>
+              {/* Rating Box */}
+              <div className="mx-8 lg:mx-12 mt-6 mb-6 bg-[#f6f5f3] rounded-xl py-5 px-7 flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="text-[64px] font-medium leading-none text-[#2d2d2d]">4,8</div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg key={star} width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24">
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                      ))}
+                    </div>
+                    <div className="text-[13px] text-gray-600">17 оценок</div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 items-end">
+                  <div className="text-[14px] text-gray-700 leading-tight">
+                    Оцените это место
+                  </div>
+                  <div
+                    className="flex gap-0.5"
+                    onMouseLeave={() => setHoverRating(0)}
+                  >
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        className="hover:scale-110 transition"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onClick={() => setRating(star)}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill={star <= hoverRating ? "#fbbf24" : "none"} stroke={star <= hoverRating ? "#fbbf24" : "#d1d5db"} strokeWidth="2">
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reviews Header */}
+              <div className="flex items-center justify-between px-8 lg:px-12 mb-4">
+                <h2 className="text-[22px] font-medium text-black">
+                  {getFilteredAndSortedReviews().length} reviews
+                </h2>
+                <div className="flex gap-3">
+                  {/* Sort */}
+                  <div className="relative">
+                    <select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
+                      className="px-3 py-1.5 text-[14px] border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="default">По умолчанию</option>
+                      <option value="rating-high">Сначала высокие оценки</option>
+                      <option value="rating-low">Сначала низкие оценки</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reviews List */}
+              <div className="px-8 lg:px-12 pb-6 space-y-6">
+                {getFilteredAndSortedReviews().map((review) => (
+                  <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0">
+                    <div className="flex items-center gap-3 mb-3">
+                      <img src={review.avatar} alt={review.name} className="w-10 h-10 rounded-full" />
+                      <div>
+                        <div className="text-[15px] font-medium text-black">{review.name}</div>
+                        <div className="text-[13px] text-gray-500">{review.level}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-0.5 mb-2 ml-[52px]">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg key={star} width="14" height="14" viewBox="0 0 24 24" fill={star <= review.rating ? "#fbbf24" : "#e5e7eb"}>
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                      ))}
+                      <span className="text-[13px] text-gray-500 ml-2">{review.date}</span>
+                    </div>
+
+                    <div className="ml-[52px] text-[14px] text-gray-800 leading-relaxed">
+                      <div className={expandedReviews.has(review.id) ? '' : 'line-clamp-3'}>
+                        {review.text}
+                      </div>
+                      {review.hasMore && (
+                        <button
+                          onClick={() => toggleReviewExpanded(review.id)}
+                          className="text-blue-600 hover:text-blue-700 font-medium mt-1 transition"
+                        >
+                          {expandedReviews.has(review.id) ? 'скрыть' : 'ещё'}
+                        </button>
+                      )}
+                    </div>
+
+                    {review.photos && review.photos.length > 0 && (
+                      <div className="ml-[52px] mt-3 flex gap-2">
+                        {review.photos.map((photo, idx) => (
+                          <img key={idx} src={photo} alt="" className="w-24 h-24 rounded object-cover cursor-pointer hover:opacity-80 transition" />
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="ml-[52px] mt-3 flex gap-4 items-center">
+                      {/* Like Button */}
+                      <button
+                        onClick={() => handleLike(review.id)}
+                        className={`flex items-center gap-1.5 transition-all duration-200 ${
+                          reviewLikes[review.id]?.liked
+                            ? 'text-blue-600'
+                            : 'text-gray-400 hover:text-blue-600'
+                        } ${reviewLikes[review.id]?.liked ? 'scale-110' : ''}`}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill={reviewLikes[review.id]?.liked ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className="transition-transform hover:scale-110"
+                        >
+                          <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 002-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/>
+                        </svg>
+                        {(reviewLikes[review.id]?.likes || 0) > 0 && (
+                          <span className="text-[13px] font-medium">{reviewLikes[review.id].likes}</span>
+                        )}
+                      </button>
+
+                      {/* Dislike Button */}
+                      <button
+                        onClick={() => handleDislike(review.id)}
+                        className={`flex items-center gap-1.5 transition-all duration-200 ${
+                          reviewLikes[review.id]?.disliked
+                            ? 'text-red-600'
+                            : 'text-gray-400 hover:text-red-600'
+                        } ${reviewLikes[review.id]?.disliked ? 'scale-110' : ''}`}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill={reviewLikes[review.id]?.disliked ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className="transition-transform hover:scale-110"
+                        >
+                          <path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3zm7-13h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/>
+                        </svg>
+                        {(reviewLikes[review.id]?.dislikes || 0) > 0 && (
+                          <span className="text-[13px] font-medium">{reviewLikes[review.id].dislikes}</span>
+                        )}
+                      </button>
+
+
+                    </div>
+
+                    <button
+                      onClick={() => toggleBusinessResponse(review.id)}
+                      className="ml-[52px] mt-3 text-[13px] text-gray-500 hover:text-gray-700 flex items-center gap-1 transition"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className={`transition-transform ${showBusinessResponse.has(review.id) ? 'rotate-180' : ''}`}
+                      >
+                        <path d="M7 10l5 5 5-5z"/>
+                      </svg>
+                      {showBusinessResponse.has(review.id) ? 'Скрыть ответ организации' : 'Посмотреть ответ организации'}
+                    </button>
+
+                    {/* Business Response */}
+                    {showBusinessResponse.has(review.id) && (
+                      <div className="ml-[52px] mt-3 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg animate-slideUp">
+                        <div className="flex items-start gap-3 mb-2">
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs font-bold">FA</span>
+                          </div>
+                          <div>
+                            <div className="text-[14px] font-semibold text-gray-900">Fury Auto</div>
+                            <div className="text-[12px] text-gray-500">Представитель компании</div>
+                          </div>
+                        </div>
+                        <div className="text-[14px] text-gray-800 leading-relaxed">
+                          Спасибо за ваш отзыв! Мы очень рады, что смогли помочь вам с выбором автомобиля.
+                          Для нас важно, чтобы каждый клиент остался доволен. Будем рады видеть вас снова!
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Write Review Button */}
+              <div className="hidden lg:block fixed bottom-6 right-[50%] mr-[-300px] z-20">
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-800 px-5 py-3 rounded-full shadow-lg border border-gray-200 transition"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  <span className="text-[15px] font-medium">Написать отзыв</span>
+                </button>
+              </div>
+
+              {/* Write Review Button - Mobile */}
+              <div className="lg:hidden fixed bottom-20 right-4 z-20">
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition"
+                  aria-label="Написать отзыв"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Review Form Modal */}
+              {showReviewForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end lg:items-center justify-center z-50 animate-fadeIn p-0 lg:p-4">
+                  <div className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md animate-slideUp max-h-[90vh] overflow-y-auto">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                      <h2 className="text-[18px] lg:text-[20px] font-semibold text-gray-900">Написать отзыв</h2>
+                      <button
+                        onClick={() => setShowReviewForm(false)}
+                        className="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Form */}
+                    <div className="p-4 lg:p-6 space-y-5">
+                      {/* Rating */}
+                      <div>
+                        <label className="text-[14px] font-medium text-gray-700 mb-2 block">Ваша оценка</label>
+                        <div className="flex gap-2 justify-center lg:justify-start">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setRating(star)}
+                              className="transition hover:scale-110 active:scale-95"
+                            >
+                              <svg
+                                width="40"
+                                height="40"
+                                viewBox="0 0 24 24"
+                                fill={star <= rating ? "#fbbf24" : "none"}
+                                stroke={star <= rating ? "#fbbf24" : "#d1d5db"}
+                                strokeWidth="2"
+                                className="lg:w-8 lg:h-8"
+                              >
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Review Text */}
+                      <div>
+                        <label className="text-[14px] font-medium text-gray-700 mb-2 block">Ваш отзыв</label>
+                        <textarea
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          placeholder="Расскажите о вашем опыте работы с компанией..."
+                          className="w-full h-40 lg:h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-[14px]"
+                        />
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex flex-col lg:flex-row gap-3 pt-2 pb-4 lg:pb-0">
+                        <button
+                          onClick={() => setShowReviewForm(false)}
+                          className="flex-1 px-4 py-3 lg:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition order-2 lg:order-1"
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Здесь будет логика отправки отзыва
+                            alert(`Спасибо за ваш отзыв! Оценка: ${rating} звезд`);
+                            setShowReviewForm(false);
+                            setRating(0);
+                            setReviewText('');
+                          }}
+                          disabled={!rating || !reviewText.trim()}
+                          className="flex-1 px-4 py-3 lg:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed order-1 lg:order-2"
+                        >
+                          Опубликовать
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Right Panel - Map (Desktop Only) */}
+      <div className="hidden lg:flex flex-1 relative">
+        <iframe
+          src="https://yandex.com/map-widget/v1/?from=api-maps&ll=132.023744%2C43.788865&mode=whatshere&whatshere%5Bpoint%5D=132.023744%2C43.788865&whatshere%5Bzoom%5D=17&z=18&theme=light"
+          allowFullScreen
+          className="w-full h-full border-0"
+        />
+
+        {/* Toggle Button (Desktop) */}
+        <button
+          onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+          className="absolute top-4 left-4 w-10 h-10 bg-[#4a4a4a] hover:bg-[#5a5a5a] rounded shadow-xl flex items-center justify-center transition-all duration-300 z-20"
+          aria-label={isPanelCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
+        >
+          {isPanelCollapsed ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile: Show on Map Button */}
+      <button
+        onClick={() => setShowMap(true)}
+        className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg transition"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+        <span className="text-[15px] font-medium">Показать на карте</span>
+      </button>
+
+      {/* Mobile: Map Modal */}
+      {showMap && (
+        <div className="lg:hidden fixed inset-0 bg-white z-50 flex flex-col animate-slideUp">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-[18px] font-medium">Fury Auto на карте</h2>
+            <button
+              onClick={() => setShowMap(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <iframe
+            src="https://yandex.com/map-widget/v1/?from=api-maps&ll=132.023744%2C43.788865&mode=whatshere&whatshere%5Bpoint%5D=132.023744%2C43.788865&whatshere%5Bzoom%5D=17&z=18&theme=light"
+            allowFullScreen
+            className="flex-1 w-full border-0"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
