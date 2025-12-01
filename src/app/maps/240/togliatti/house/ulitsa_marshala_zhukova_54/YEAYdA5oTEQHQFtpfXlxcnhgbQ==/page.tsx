@@ -523,7 +523,14 @@ export default function Page() {
                   </svg>
                   <div>
                     <div className="text-[13px] lg:text-[14px] font-medium text-gray-800 mb-0.5">Адрес</div>
-                    <div className="text-[13px] lg:text-[14px] text-gray-600">г. Тольятти, ул. Маршала Жукова, д. 54, этаж 1 офис 1 ком. 3</div>
+                    <a 
+                      href="https://yandex.ru/maps/?ll=49.298510%2C53.503440&z=17&text=г.%20Тольятти%2C%20ул.%20Маршала%20Жукова%2C%20д.%2054" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[13px] lg:text-[14px] text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                    >
+                      г. Тольятти, ул. Маршала Жукова, д. 54, этаж 1 офис 1 ком. 3
+                    </a>
                   </div>
                 </div>
 
@@ -1513,7 +1520,7 @@ export default function Page() {
                     {/* Company Info */}
                     <div className="px-6 pt-3 pb-3">
                       <h3 className="text-[17px] font-medium text-gray-900">AVTOMIX PREMIER</h3>
-                      <p className="text-[13px] text-gray-500 mt-0.5">ул. Маршала Жукова, 54</p>
+                      <a href="https://yandex.ru/maps/?ll=49.298510%2C53.503440&z=17&text=г.%20Тольятти%2C%20ул.%20Маршала%20Жукова%2C%20д.%2054" target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-600 hover:text-blue-700 active:text-blue-800 mt-0.5 block">ул. Маршала Жукова, 54</a>
                     </div>
 
                     {/* Form */}
@@ -2043,7 +2050,14 @@ export default function Page() {
                           </svg>
                           <div className="flex-1 min-w-0">
                             <div className="text-[12px] xs:text-[13px] font-medium text-gray-800 mb-0.5">Адрес</div>
-                            <div className="text-[12px] xs:text-[13px] text-gray-600 leading-relaxed">г. Тольятти, ул. Маршала Жукова, д. 54, этаж 1 офис 1 ком. 3</div>
+                            <a 
+                              href="https://yandex.ru/maps/?ll=49.298510%2C53.503440&z=17&text=г.%20Тольятти%2C%20ул.%20Маршала%20Жукова%2C%20д.%2054" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[12px] xs:text-[13px] text-blue-600 hover:text-blue-700 active:text-blue-800 leading-relaxed block"
+                            >
+                              г. Тольятти, ул. Маршала Жукова, д. 54, этаж 1 офис 1 ком. 3
+                            </a>
                           </div>
                         </div>
 
@@ -3361,7 +3375,7 @@ export default function Page() {
               </div>
               <div className="px-6 pt-3 pb-3">
                 <h3 className="text-[17px] font-medium text-gray-900">AVTOMIX PREMIER</h3>
-                <p className="text-[13px] text-gray-500 mt-0.5">ул. Маршала Жукова, 54</p>
+                <a href="https://yandex.ru/maps/?ll=49.298510%2C53.503440&z=17&text=г.%20Тольятти%2C%20ул.%20Маршала%20Жукова%2C%20д.%2054" target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-600 hover:text-blue-700 active:text-blue-800 mt-0.5 block">ул. Маршала Жукова, 54</a>
               </div>
               <div className="px-6 pb-6 space-y-4">
                 <div className="flex gap-2 justify-center" onMouseLeave={() => setHoverRatingModal(0)}>
